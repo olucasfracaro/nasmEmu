@@ -24,7 +24,7 @@ public final class CPU32 {
 
     private int eflags;
 
-    public int getEflags() {return eflags; }
+    public int getEflags() { return eflags; }
     public void setEflags(int eflags) { this.eflags = eflags; }
 
     
@@ -32,7 +32,22 @@ public final class CPU32 {
         this.eflags = 0;
     }
 
-    public void updateFlagsForAdd(int a, int b, int result) {
+    @Override
+    public String toString() {
+        return "CPU32 {" +
+                "\n\teax=" + eax.get() +
+                "\n\tebx=" + ebx.get() +
+                "\n\tecx=" + ecx.get() +
+                "\n\tedx=" + edx.get() +
+                "\n\tesi=" + esi.get() +
+                "\n\tedi=" + edi.get() +
+                "\n\tebp=" + ebp.get() +
+                "\n\tesp=" + esp.get() +
+                "\n\teflags=" + getEflags() +
+                "\n}";
+    }
+
+    public void updateFlagsForOps(int a, int b, int result) {
 
         /*
          * CF - Carry Flag
@@ -85,6 +100,47 @@ public final class CPU32 {
     }
 }
 
+final class And extends BinaryInstruction {
+
+    public And(Register32 destination, Operand32 source) {
+        super(destination, source);
+    }
+
+    @Override
+    public void execute(CPU32 cpu) {
+
+        int a = destination.get();
+        int b = source.get();
+
+        int result = a & b;
+
+        destination.set(result);
+
+        // Update flags
+        cpu.updateFlagsForOps(a, b, result);
+    }
+}
+
+final class Or extends BinaryInstruction {
+
+    public Or(Register32 destination, Operand32 source) {
+        super(destination, source);
+    }
+
+    @Override
+    public void execute(CPU32 cpu) {
+
+        int a = destination.get();
+        int b = source.get();
+
+        int result = a | b;
+
+        destination.set(result);
+
+        cpu.updateFlagsForOps(a, b, result);
+    }
+}
+
 final class Xor extends BinaryInstruction {
 
     public Xor(Register32 destination, Operand32 source) {
@@ -101,8 +157,7 @@ final class Xor extends BinaryInstruction {
 
         destination.set(result);
 
-        // Update flags
-        cpu.updateFlagsForAdd(a, b, result);
+        cpu.updateFlagsForOps(a, b, result);
     }
 }
 
@@ -135,6 +190,7 @@ final class Add extends BinaryInstruction {
 
         destination.set(result);
 
-        cpu.updateFlagsForAdd(a, b, result);
+        cpu.updateFlagsForOps(a, b, result);
     }
 }
+

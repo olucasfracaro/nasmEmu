@@ -13,7 +13,7 @@ public class Principal {
         // EBX = 20
         Instruction addEbx = new Add(
             cpu.ebx(),
-            new Immediate32(20)
+            new Immediate32(15)
         );
 
         addEax.execute(cpu);
@@ -39,11 +39,14 @@ public class Principal {
 			cpu.eax()
 		);
 
-        xorEax.execute(cpu);
+        Instruction andEbx = new And(
+            cpu.ebx(),
+            new Immediate32(1)
+        );
 
-        System.out.println("EAX: " + cpu.eax().get());
-        System.out.println("EBX: " + cpu.ebx().get());
-        System.out.println("ECX: " + cpu.ecx().get());
-        System.out.println("EFLAGS: " + cpu.getEflags());
+        xorEax.execute(cpu);
+        andEbx.execute(cpu);
+
+        System.out.println(cpu);
     }
 }
