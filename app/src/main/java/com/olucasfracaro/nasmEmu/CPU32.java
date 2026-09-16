@@ -1,3 +1,5 @@
+package com.olucasfracaro.nasmEmu;
+
 public final class CPU32 {
 
     private final Register32 eax = new Register32();
@@ -55,7 +57,7 @@ public final class CPU32 {
         } else {
             eflags &= ~(1 << 6);
         }
-
+ 
         /*
          * SF - Sign Flag
          * Bit 7 (xxxxxxYx)

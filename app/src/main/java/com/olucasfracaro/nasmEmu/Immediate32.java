@@ -1,3 +1,5 @@
+package com.olucasfracaro.nasmEmu;
+
 public final class Immediate32 implements Operand32 {
 
     private final int value;

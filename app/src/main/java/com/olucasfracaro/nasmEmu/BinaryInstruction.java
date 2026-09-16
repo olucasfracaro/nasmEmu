@@ -1,3 +1,5 @@
+package com.olucasfracaro.nasmEmu;
+
 abstract class BinaryInstruction implements Instruction {
 
     protected final Register32 destination;

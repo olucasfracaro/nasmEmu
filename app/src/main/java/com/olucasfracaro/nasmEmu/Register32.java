@@ -1,3 +1,5 @@
+package com.olucasfracaro.nasmEmu;
+
 public final class Register32 implements Operand32 {
 
     private int value;

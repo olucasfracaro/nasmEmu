@@ -1,5 +1,6 @@
+package com.olucasfracaro.nasmEmu;
 
-public class Main {
+public class Principal {
     public static void main(String[] args) {
         CPU32 cpu = new CPU32();
 
