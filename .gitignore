@@ -7,6 +7,6 @@ build
 
 app/build
 app/bin
-
+app/src/main/java/com/olucasfracaro/nasmEmu/*.asm
 
 .vscode
