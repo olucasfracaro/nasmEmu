@@ -109,7 +109,7 @@ public class Lexer {
                         partes.subList(2, partes.size())
                     );
 
-                    String[] listaOperandos = operandos.split(",");
+                    String[] listaOperandos = separarOperandos(operandos);
 
                     for (String operando : listaOperandos) {
 
@@ -120,12 +120,13 @@ public class Lexer {
                         }
 
                         Tipo tipoOperando;
-
-                        if (operando.matches("-?(\\d+|0[xX][0-9a-fA-F]+)")) {
+                        if (operando.equals(",")) {
+                            tipoOperando = Tipo.VIRGULA;
+                        }
+                        else if (isNumero(operando)) {
                             tipoOperando = Tipo.NUMERO;
                         }
-                        else if (operando.startsWith("\"")
-                              && operando.endsWith("\"")) {
+                        else if (isTexto(operando)) {
                             tipoOperando = Tipo.TEXTO;
                         }
                         else if (isRegistrador(operando)) {
@@ -163,26 +164,30 @@ public class Lexer {
             );
 
             //OPERANDOS
-            if (partes.size() > 1) {
+            if (partes.size() >= 1) {
 
                 String operandos = String.join(
                     " ",
-                    partes.subList(2, partes.size())
+                    partes.subList(1, partes.size())
                 );
 
-                String[] listaOperandos = operandos.split(",");
+                String[] listaOperandos = separarOperandos(operandos);
 
                 for (String operando : listaOperandos) {
 
                     operando = operando.trim();
+                    operando = operando.replace("[", " [ ").replace("]", " ] ");
 
                     if (operando.isEmpty()) {
                         continue;
                     }
 
-                    Tipo tipoOperando;
+                    Tipo tipoOperando = Tipo.IDENTIFICADOR;
 
-                    if (operando.matches("-?(\\d+|0[xX][0-9a-fA-F]+)")) {
+                    if (operando.equals(",")) {
+                        tipoOperando = Tipo.VIRGULA;
+                    }
+                    else if (isNumero(operando)) {
                         tipoOperando = Tipo.NUMERO;
                     }
                     else if (isRegistrador(operando)) {
@@ -194,12 +199,64 @@ public class Lexer {
                     else if (isDiretiva(operando)) {
                         tipoOperando = Tipo.DIRETIVA;
                     }
-                    else if (operando.startsWith("\"")
-                          && operando.endsWith("\"")) {
+                    else if (isTexto(operando)) {
                         tipoOperando = Tipo.TEXTO;
                     }
                     else {
-                        tipoOperando = Tipo.IDENTIFICADOR;
+                        if (operando.contains("[") || operando.contains("]")) {
+                            for (String subOperando : operando.split("\\s+")) {
+                                subOperando = subOperando.trim();
+
+                                if (subOperando.isEmpty()) {
+                                    continue;
+                                }
+
+                                Tipo tipoSubOperando;
+
+                                if (subOperando.equals("[")) {
+                                    tipoSubOperando = Tipo.ABRE_COLCHETE;
+                                }
+                                else if (subOperando.equals("]")) {
+                                    tipoSubOperando = Tipo.FECHA_COLCHETE;
+                                }
+                                else if (subOperando.equals(",")) {
+                                    tipoSubOperando = Tipo.VIRGULA;
+                                }
+                                else if (isNumero(subOperando)) {
+                                    tipoSubOperando = Tipo.NUMERO;
+                                }
+                                else if (isRegistrador(subOperando)) {
+                                    tipoSubOperando = Tipo.REGISTRADOR;
+                                }
+                                else if (isInstrucao(subOperando)) {
+                                    tipoSubOperando = Tipo.INSTRUCAO;
+                                }
+                                else if (isOperador(subOperando)) {
+                                    tipoSubOperando = Tipo.OPERADOR;
+                                }
+                                else if (isDiretiva(subOperando)) {
+                                    tipoSubOperando = Tipo.DIRETIVA;
+                                }
+                                else if (isTexto(subOperando)) {
+                                    tipoSubOperando = Tipo.TEXTO;
+                                }
+                                else {
+                                    tipoSubOperando = Tipo.IDENTIFICADOR;
+                                }
+
+                                tokens.add(
+                                    new Token(
+                                        tipoSubOperando,
+                                        subOperando,
+                                        numeroLinha
+                                    )
+                                );
+                            }
+                            continue;
+                        }
+                        else {
+                            tipoOperando = Tipo.IDENTIFICADOR;
+                        }
                     }
 
                     tokens.add(
@@ -216,6 +273,14 @@ public class Lexer {
         }
 
         return tokens;
+    }
+
+    private boolean isTexto(String palavra) {
+        return palavra.startsWith("\"") && palavra.endsWith("\"");
+    }
+
+    private boolean isNumero(String palavra) {
+        return palavra.matches("-?(\\d+|0[xX][0-9a-fA-F]+)");
     }
 
     private boolean isInstrucao(String palavra) {
@@ -279,21 +344,23 @@ public class Lexer {
         };
     }
 
-    private Tipo identificarPalavra(String palavra) {
+    private boolean isOperador(String palavra) {
+        return switch (palavra) {
+            case "+", "-", "*", "/", "%",
+                "&", "|", "^", "~",
+                "<<", ">>" -> true;
 
+            default -> false;
+        };
+    }
+
+    private Tipo identificarPalavra(String palavra) {
         String p = palavra.toLowerCase();
 
-        if (isInstrucao(p)) {
-            return Tipo.INSTRUCAO;
-        }
-
-        if (isDiretiva(p)) {
-            return Tipo.DIRETIVA;
-        }
-
-        if (isRegistrador(p)) {
-            return Tipo.REGISTRADOR;
-        }
+        if (isInstrucao(p)) return Tipo.INSTRUCAO;
+        if (isDiretiva(p)) return Tipo.DIRETIVA;
+        if (isOperador(p)) return Tipo.OPERADOR;
+        if (isRegistrador(p)) return Tipo.REGISTRADOR;
 
         return Tipo.IDENTIFICADOR;
     }
@@ -309,7 +376,14 @@ public class Lexer {
 
             char c = linha.charAt(i);
 
-            if (c == '"') {
+            if (c == ',' && !dentroDeString) {
+                if (atual.length() > 0) {
+                    palavras.add(atual.toString());
+                    atual.setLength(0);
+                }
+                palavras.add(",");
+            }
+            else if (c == '"') {
                 dentroDeString = !dentroDeString;
                 atual.append(c);
             }
@@ -333,12 +407,45 @@ public class Lexer {
         return palavras;
     }
 
+    private String[] separarOperandos(String operandos) {
+        ArrayList<String> lista = new ArrayList<>();
+        StringBuilder atual = new StringBuilder();
+
+        boolean dentroDeString = false;
+
+        for (int i = 0; i < operandos.length(); i++) {
+            char c = operandos.charAt(i);
+
+            if (c == '"') {
+                dentroDeString = !dentroDeString;
+                atual.append(c);
+            }
+            else if (c == ',' && !dentroDeString) {
+                if (atual.length() > 0) {
+                    lista.add(atual.toString().trim());
+                    atual.setLength(0);
+                }
+
+                lista.add(",");
+            }
+            else {
+                atual.append(c);
+            }
+        }
+
+        if (atual.length() > 0) {
+            lista.add(atual.toString().trim());
+        }
+
+        return lista.toArray(new String[0]);
+    }
+
     @Override
     public String toString() {
         return String.join(
             "\n",
             tokens.stream()
-                .map(Token::toString)
+                .map(token -> token.toString())
                 .toArray(String[]::new)
         );
     }
