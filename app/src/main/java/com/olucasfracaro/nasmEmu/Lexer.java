@@ -30,8 +30,7 @@ public class Lexer {
             String linhaSemComentario = linha;
 
             if (linhaSemComentario.contains(";")) {
-                linhaSemComentario =
-                    linhaSemComentario.substring(0, linhaSemComentario.indexOf(";"));
+                linhaSemComentario = this.extrairComentario(linhaSemComentario);
             }
 
             linhaSemComentario = linhaSemComentario.trim();
@@ -251,6 +250,26 @@ public class Lexer {
         return tokens;
     }
 
+    private String extrairComentario(String linhaSemComentario) {
+        boolean dentroDeString = false;
+
+        for (int i = 0; i < linhaSemComentario.length(); i++) {
+
+            char c = linhaSemComentario.charAt(i);
+
+            if (c == '"') {
+                dentroDeString = !dentroDeString;
+            }
+
+            if (c == ';' && !dentroDeString) {
+                linhaSemComentario =
+                    linhaSemComentario.substring(0, i);
+                break;
+            }
+        }
+        return linhaSemComentario;
+    }
+
     private boolean isTexto(String palavra) {
         return palavra.startsWith("\"") && palavra.endsWith("\"");
     }
@@ -373,6 +392,22 @@ public class Lexer {
                 }
 
                 palavras.add(String.valueOf(c));
+            }
+            else if (isOperador(String.valueOf(c))) {
+                //pode ser numero negativo
+                if (c == '-' && atual.length() == 0 && i + 1 < linha.length()
+                        && Character.isDigit(linha.charAt(i + 1))) {
+
+                    atual.append(c);
+                }
+                else {
+                    if (atual.length() > 0) {
+                        palavras.add(atual.toString());
+                        atual.setLength(0);
+                    }
+
+                    palavras.add(String.valueOf(c));
+                }
             }
             else if (c == '"') {
                 dentroDeString = !dentroDeString;

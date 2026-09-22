@@ -34,3 +34,11 @@ application {
     // Define the main class for the application.
     mainClass = "com.olucasfracaro.nasmEmu.Principal"
 }
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+}
+
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}
