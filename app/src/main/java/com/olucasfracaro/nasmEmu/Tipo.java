@@ -22,7 +22,5 @@ public enum Tipo {
 
     COMENTARIO,
 
-    FIM_LINHA,
-
-    DESCONHECIDO
+    FIM_LINHA
 }

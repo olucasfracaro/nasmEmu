@@ -55,11 +55,25 @@ public class Lexer {
                         numeroLinha
                     )
                 );
+                tokens.add(
+                    new Token(
+                        Tipo.DOIS_PONTOS,
+                        ":",
+                        numeroLinha
+                    )
+                );
 
                 if (partesLabel.length > 1) {
                     linhaSemComentario = partesLabel[1].trim();
 
                     if (linhaSemComentario.isEmpty()) {
+                        tokens.add(
+                            new Token(
+                                Tipo.FIM_LINHA,
+                                "\\n",
+                                numeroLinha
+                            )
+                        );
                         numeroLinha++;
                         continue;
                     }
@@ -145,6 +159,13 @@ public class Lexer {
                         );
                     }
                 }
+                tokens.add(
+                    new Token(
+                        Tipo.FIM_LINHA,
+                        "\\n",
+                        numeroLinha
+                    )
+                );
 
                 numeroLinha++;
                 continue;
@@ -165,27 +186,28 @@ public class Lexer {
 
             //OPERANDOS
             if (partes.size() >= 1) {
-
-                String operandos = String.join(
-                    " ",
-                    partes.subList(1, partes.size())
-                );
-
-                String[] listaOperandos = separarOperandos(operandos);
-
-                for (String operando : listaOperandos) {
+                for (String operando : partes.subList(1, partes.size())) {
 
                     operando = operando.trim();
-                    operando = operando.replace("[", " [ ").replace("]", " ] ");
 
-                    if (operando.isEmpty()) {
-                        continue;
-                    }
+                    if (operando.isEmpty()) continue;
 
                     Tipo tipoOperando = Tipo.IDENTIFICADOR;
 
                     if (operando.equals(",")) {
                         tipoOperando = Tipo.VIRGULA;
+                    }
+                    else if (operando.equals(":")) {
+                        tipoOperando = Tipo.DOIS_PONTOS;
+                    }
+                    else if (operando.equals("[")) {
+                        tipoOperando = Tipo.ABRE_COLCHETE;
+                    }
+                    else if (operando.equals("]")) {
+                        tipoOperando = Tipo.FECHA_COLCHETE;
+                    }
+                    else if (isOperador(operando)) {
+                        tipoOperando = Tipo.OPERADOR;
                     }
                     else if (isNumero(operando)) {
                         tipoOperando = Tipo.NUMERO;
@@ -203,60 +225,7 @@ public class Lexer {
                         tipoOperando = Tipo.TEXTO;
                     }
                     else {
-                        if (operando.contains("[") || operando.contains("]")) {
-                            for (String subOperando : operando.split("\\s+")) {
-                                subOperando = subOperando.trim();
-
-                                if (subOperando.isEmpty()) {
-                                    continue;
-                                }
-
-                                Tipo tipoSubOperando;
-
-                                if (subOperando.equals("[")) {
-                                    tipoSubOperando = Tipo.ABRE_COLCHETE;
-                                }
-                                else if (subOperando.equals("]")) {
-                                    tipoSubOperando = Tipo.FECHA_COLCHETE;
-                                }
-                                else if (subOperando.equals(",")) {
-                                    tipoSubOperando = Tipo.VIRGULA;
-                                }
-                                else if (isNumero(subOperando)) {
-                                    tipoSubOperando = Tipo.NUMERO;
-                                }
-                                else if (isRegistrador(subOperando)) {
-                                    tipoSubOperando = Tipo.REGISTRADOR;
-                                }
-                                else if (isInstrucao(subOperando)) {
-                                    tipoSubOperando = Tipo.INSTRUCAO;
-                                }
-                                else if (isOperador(subOperando)) {
-                                    tipoSubOperando = Tipo.OPERADOR;
-                                }
-                                else if (isDiretiva(subOperando)) {
-                                    tipoSubOperando = Tipo.DIRETIVA;
-                                }
-                                else if (isTexto(subOperando)) {
-                                    tipoSubOperando = Tipo.TEXTO;
-                                }
-                                else {
-                                    tipoSubOperando = Tipo.IDENTIFICADOR;
-                                }
-
-                                tokens.add(
-                                    new Token(
-                                        tipoSubOperando,
-                                        subOperando,
-                                        numeroLinha
-                                    )
-                                );
-                            }
-                            continue;
-                        }
-                        else {
-                            tipoOperando = Tipo.IDENTIFICADOR;
-                        }
+                        tipoOperando = Tipo.IDENTIFICADOR;
                     }
 
                     tokens.add(
@@ -268,6 +237,13 @@ public class Lexer {
                     );
                 }
             }
+            tokens.add(
+                new Token(
+                    Tipo.FIM_LINHA,
+                    "\\n",
+                    numeroLinha
+                )
+            );
 
             numeroLinha++;
         }
@@ -382,6 +358,21 @@ public class Lexer {
                     atual.setLength(0);
                 }
                 palavras.add(",");
+            }
+            else if (c == ':' && !dentroDeString) {
+                if (atual.length() > 0) {
+                    palavras.add(atual.toString());
+                    atual.setLength(0);
+                }
+                palavras.add(":");
+            }
+            else if (c == '[' || c == ']') {
+                if (atual.length() > 0) {
+                    palavras.add(atual.toString());
+                    atual.setLength(0);
+                }
+
+                palavras.add(String.valueOf(c));
             }
             else if (c == '"') {
                 dentroDeString = !dentroDeString;
