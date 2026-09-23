@@ -4,20 +4,10 @@ import java.util.ArrayList;
 
 public class Lexer {
     private String codigo;
-
     private ArrayList<Token> tokens = new ArrayList<>();
-
-    public void setCodigo(String codigo) {
-        this.codigo = codigo;
-    }
-
-    public String getCodigo() {
-        return this.codigo;
-    }
 
     public Lexer(String codigo) {
         this.codigo = codigo;
-        this.tokenizar();
     }
 
     public ArrayList<Token> tokenizar() {
@@ -27,11 +17,7 @@ public class Lexer {
 
         for (String linha : linhas) {
 
-            String linhaSemComentario = linha;
-
-            if (linhaSemComentario.contains(";")) {
-                linhaSemComentario = this.extrairComentario(linhaSemComentario);
-            }
+            String linhaSemComentario = linha.contains(";") ? this.extrairComentario(linha) : linha;
 
             linhaSemComentario = linhaSemComentario.trim();
 
@@ -84,17 +70,8 @@ public class Lexer {
 
             ArrayList<String> partes = separarPalavras(linhaSemComentario);
 
-            // ---------------------------------------------------------
-            // DECLARAÇÃO DE DADOS
-            //
-            // Exemplo:
-            // buffer resb 64
-            // result resd 1
-            // value dd 42
-            // msg db "Hello", 10, 0
-            // ---------------------------------------------------------
-
-            if (partes.size() >= 2 && isDiretiva(partes.get(1))) {
+            //.bss e .data
+            if (partes.size() >= 2 && Analisador.isDiretiva(partes.get(1))) {
 
                 //Tipo.IDENTIFICADOR
                 tokens.add(
@@ -133,21 +110,11 @@ public class Lexer {
                         }
 
                         Tipo tipoOperando;
-                        if (operando.equals(",")) {
-                            tipoOperando = Tipo.VIRGULA;
-                        }
-                        else if (isNumero(operando)) {
-                            tipoOperando = Tipo.NUMERO;
-                        }
-                        else if (isTexto(operando)) {
-                            tipoOperando = Tipo.TEXTO;
-                        }
-                        else if (isRegistrador(operando)) {
-                            tipoOperando = Tipo.REGISTRADOR;
-                        }
-                        else {
-                            tipoOperando = Tipo.IDENTIFICADOR;
-                        }
+                        if (operando.equals(","))                       tipoOperando = Tipo.VIRGULA;
+                        else if (Analisador.isNumero(operando))         tipoOperando = Tipo.NUMERO;
+                        else if (Analisador.isTexto(operando))          tipoOperando = Tipo.TEXTO;
+                        else if (Analisador.isRegistrador(operando))    tipoOperando = Tipo.REGISTRADOR;
+                        else                                            tipoOperando = Tipo.IDENTIFICADOR;
 
                         tokens.add(
                             new Token(
@@ -193,39 +160,17 @@ public class Lexer {
 
                     Tipo tipoOperando = Tipo.IDENTIFICADOR;
 
-                    if (operando.equals(",")) {
-                        tipoOperando = Tipo.VIRGULA;
-                    }
-                    else if (operando.equals(":")) {
-                        tipoOperando = Tipo.DOIS_PONTOS;
-                    }
-                    else if (operando.equals("[")) {
-                        tipoOperando = Tipo.ABRE_COLCHETE;
-                    }
-                    else if (operando.equals("]")) {
-                        tipoOperando = Tipo.FECHA_COLCHETE;
-                    }
-                    else if (isOperador(operando)) {
-                        tipoOperando = Tipo.OPERADOR;
-                    }
-                    else if (isNumero(operando)) {
-                        tipoOperando = Tipo.NUMERO;
-                    }
-                    else if (isRegistrador(operando)) {
-                        tipoOperando = Tipo.REGISTRADOR;
-                    }
-                    else if (isInstrucao(operando)) {
-                        tipoOperando = Tipo.INSTRUCAO;
-                    }
-                    else if (isDiretiva(operando)) {
-                        tipoOperando = Tipo.DIRETIVA;
-                    }
-                    else if (isTexto(operando)) {
-                        tipoOperando = Tipo.TEXTO;
-                    }
-                    else {
-                        tipoOperando = Tipo.IDENTIFICADOR;
-                    }
+                    if (operando.equals(","))                   tipoOperando = Tipo.VIRGULA;
+                    else if (operando.equals(":"))              tipoOperando = Tipo.DOIS_PONTOS;
+                    else if (operando.equals("["))              tipoOperando = Tipo.ABRE_COLCHETE;
+                    else if (operando.equals("]"))              tipoOperando = Tipo.FECHA_COLCHETE;
+                    else if (Analisador.isOperador(operando))   tipoOperando = Tipo.OPERADOR;
+                    else if (Analisador.isNumero(operando))     tipoOperando = Tipo.NUMERO;
+                    else if (Analisador.isRegistrador(operando))tipoOperando = Tipo.REGISTRADOR;
+                    else if (Analisador.isInstrucao(operando))  tipoOperando = Tipo.INSTRUCAO;
+                    else if (Analisador.isDiretiva(operando))   tipoOperando = Tipo.DIRETIVA;
+                    else if (Analisador.isTexto(operando))      tipoOperando = Tipo.TEXTO;
+                    else                                        tipoOperando = Tipo.IDENTIFICADOR;
 
                     tokens.add(
                         new Token(
@@ -252,178 +197,104 @@ public class Lexer {
 
     private String extrairComentario(String linhaSemComentario) {
         boolean dentroDeString = false;
+        char aspasAbertura = 0;
 
         for (int i = 0; i < linhaSemComentario.length(); i++) {
-
             char c = linhaSemComentario.charAt(i);
 
-            if (c == '"') {
+            //suporte tanto a " quanto a '
+            if ((c == '"' || c == '\'') && (!dentroDeString || c == aspasAbertura)) {
                 dentroDeString = !dentroDeString;
+                aspasAbertura = dentroDeString ? c : 0;
             }
 
             if (c == ';' && !dentroDeString) {
-                linhaSemComentario =
-                    linhaSemComentario.substring(0, i);
+                linhaSemComentario = linhaSemComentario.substring(0, i);
                 break;
             }
         }
         return linhaSemComentario;
     }
 
-    private boolean isTexto(String palavra) {
-        return palavra.startsWith("\"") && palavra.endsWith("\"");
-    }
-
-    private boolean isNumero(String palavra) {
-        return palavra.matches("-?(\\d+|0[xX][0-9a-fA-F]+)");
-    }
-
-    private boolean isInstrucao(String palavra) {
-
-        palavra = palavra.toLowerCase();
-
-        return switch (palavra) {
-            case "mov", "lea",
-                "add", "sub",
-                "inc", "dec", "neg",
-                "imul",
-                "and", "or", "xor", "not",
-                "shl", "shr", "rol", "ror",
-                "cmp", "test",
-                "je", "jne", "jmp",
-                "push", "pop", "xchg",
-                "loop",
-                "nop",
-                "div", "idiv",
-                "cdq", "cwd",
-                "int" -> true;
-
-            default -> false;
-        };
-    }
-
-    private boolean isDiretiva(String palavra) {
-
-        palavra = palavra.toLowerCase();
-
-        return switch (palavra) {
-            case "bits",
-                "global",
-                "section",
-                "db",
-                "dw",
-                "dd",
-                "dq",
-                "equ",
-                "resb",
-                "resw",
-                "resd",
-                "resq" -> true;
-
-            default -> false;
-        };
-    }
-
-    private boolean isRegistrador(String palavra) {
-
-        palavra = palavra.toLowerCase();
-
-        return switch (palavra) {
-            case "eax", "ebx", "ecx", "edx",
-                "esi", "edi", "esp", "ebp",
-                "ax", "bx", "cx", "dx",
-                "al", "ah", "bl", "bh",
-                "cl", "ch", "dl", "dh" -> true;
-
-            default -> false;
-        };
-    }
-
-    private boolean isOperador(String palavra) {
-        return switch (palavra) {
-            case "+", "-", "*", "/", "%",
-                "&", "|", "^", "~",
-                "<<", ">>" -> true;
-
-            default -> false;
-        };
-    }
-
     private Tipo identificarPalavra(String palavra) {
         String p = palavra.toLowerCase();
 
-        if (isInstrucao(p)) return Tipo.INSTRUCAO;
-        if (isDiretiva(p)) return Tipo.DIRETIVA;
-        if (isOperador(p)) return Tipo.OPERADOR;
-        if (isRegistrador(p)) return Tipo.REGISTRADOR;
+        if (Analisador.isInstrucao(p))      return Tipo.INSTRUCAO;
+        if (Analisador.isDiretiva(p))       return Tipo.DIRETIVA;
+        if (Analisador.isOperador(p))       return Tipo.OPERADOR;
+        if (Analisador.isRegistrador(p))    return Tipo.REGISTRADOR;
 
         return Tipo.IDENTIFICADOR;
     }
 
     private ArrayList<String> separarPalavras(String linha) {
         ArrayList<String> palavras = new ArrayList<>();
-
         StringBuilder atual = new StringBuilder();
 
         boolean dentroDeString = false;
+        char aspasAbertura = 0;
 
         for (int i = 0; i < linha.length(); i++) {
-
             char c = linha.charAt(i);
 
-            if (c == ',' && !dentroDeString) {
-                if (atual.length() > 0) {
-                    palavras.add(atual.toString());
-                    atual.setLength(0);
-                }
-                palavras.add(",");
+            // Controle de Strings com ' ou "
+            if ((c == '"' || c == '\'') && (!dentroDeString || c == aspasAbertura)) {
+                dentroDeString = !dentroDeString;
+                aspasAbertura = dentroDeString ? c : 0;
+                atual.append(c);
+                continue;
             }
-            else if (c == ':' && !dentroDeString) {
-                if (atual.length() > 0) {
-                    palavras.add(atual.toString());
-                    atual.setLength(0);
-                }
-                palavras.add(":");
-            }
-            else if (c == '[' || c == ']') {
-                if (atual.length() > 0) {
-                    palavras.add(atual.toString());
-                    atual.setLength(0);
-                }
 
+            if (dentroDeString) {
+                atual.append(c);
+                continue;
+            }
+
+            // Símbolos delimitadores
+            if (c == ',' || c == ':' || c == '[' || c == ']') {
+                if (atual.length() > 0) {
+                    palavras.add(atual.toString());
+                    atual.setLength(0);
+                }
                 palavras.add(String.valueOf(c));
+                continue;
             }
-            else if (isOperador(String.valueOf(c))) {
-                //pode ser numero negativo
-                if (c == '-' && atual.length() == 0 && i + 1 < linha.length()
-                        && Character.isDigit(linha.charAt(i + 1))) {
 
-                    atual.append(c);
+            // Operadores de 2 caracteres (<< e >>)
+            if ((c == '<' || c == '>') && i + 1 < linha.length() && linha.charAt(i + 1) == c) {
+                if (atual.length() > 0) {
+                    palavras.add(atual.toString());
+                    atual.setLength(0);
                 }
-                else {
+                palavras.add(linha.substring(i, i + 2));
+                i++; // Pula o caractere repetido
+                continue;
+            }
+
+            // Operadores de 1 caractere ou sinal negativo
+            if (Analisador.isOperador(String.valueOf(c))) {
+                if (c == '-' && atual.length() == 0 && i + 1 < linha.length() && Character.isDigit(linha.charAt(i + 1))) {
+                    atual.append(c);
+                } else {
                     if (atual.length() > 0) {
                         palavras.add(atual.toString());
                         atual.setLength(0);
                     }
-
                     palavras.add(String.valueOf(c));
                 }
+                continue;
             }
-            else if (c == '"') {
-                dentroDeString = !dentroDeString;
-                atual.append(c);
-            }
-            else if (Character.isWhitespace(c) && !dentroDeString) {
 
+            // Espaços
+            if (Character.isWhitespace(c)) {
                 if (atual.length() > 0) {
                     palavras.add(atual.toString());
                     atual.setLength(0);
                 }
+                continue;
+            }
 
-            }
-            else {
-                atual.append(c);
-            }
+            atual.append(c);
         }
 
         if (atual.length() > 0) {
@@ -438,12 +309,14 @@ public class Lexer {
         StringBuilder atual = new StringBuilder();
 
         boolean dentroDeString = false;
+        char aspasAbertura = 0;
 
         for (int i = 0; i < operandos.length(); i++) {
             char c = operandos.charAt(i);
 
-            if (c == '"') {
+            if ((c == '"' || c == '\'') && (!dentroDeString || c == aspasAbertura)) {
                 dentroDeString = !dentroDeString;
+                aspasAbertura = dentroDeString ? c : 0;
                 atual.append(c);
             }
             else if (c == ',' && !dentroDeString) {
@@ -451,7 +324,6 @@ public class Lexer {
                     lista.add(atual.toString().trim());
                     atual.setLength(0);
                 }
-
                 lista.add(",");
             }
             else {
@@ -465,6 +337,9 @@ public class Lexer {
 
         return lista.toArray(new String[0]);
     }
+
+    public void setCodigo(String codigo) { this.codigo = codigo; }
+    public String getCodigo() { return this.codigo; }
 
     @Override
     public String toString() {

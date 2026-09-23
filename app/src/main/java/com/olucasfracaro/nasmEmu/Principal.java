@@ -1,11 +1,15 @@
 package com.olucasfracaro.nasmEmu;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Scanner;
 
 public class Principal
 {
+    private static final Path DIRETORIO_ASSEMBLY =
+            Path.of("src/main/java/com/olucasfracaro/nasmEmu");
+
 	public static void main(String[] args) {
         if (args.length > 0) {
             System.out.printf("Usando o código Assembly: %s", args[0]);
@@ -36,6 +40,8 @@ public class Principal
             }
             scanner.close();
             Lexer lexer = new Lexer(conteudo.toString());
+            lexer.tokenizar();
+
             System.out.println(lexer);
         }
         else if (opc.equals("2")) {
@@ -43,24 +49,23 @@ public class Principal
             System.out.printf("Usando o código Assembly: %s", arquivo);
             String conteudo = lerArquivo(arquivo);
             Lexer lexer = new Lexer(conteudo);
+            lexer.tokenizar();
             
             System.out.println(lexer);
         }
 	}
 
     public static String lerArquivo(String arquivo) {
-        String path = "/home/positivo/prog/nasmEmu/app/src/main/java/com/olucasfracaro/nasmEmu/" + arquivo;
-
-        StringBuilder content = new StringBuilder();
-        try {
-            Scanner scanner = new Scanner(new File(path));
-            while (scanner.hasNextLine()) {
-                content.append(scanner.nextLine()).append("\n");
-            }
-            scanner.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+        Path caminho = Path.of(arquivo);
+        if (!caminho.isAbsolute() && caminho.getNameCount() == 1) {
+            caminho = DIRETORIO_ASSEMBLY.resolve(caminho);
         }
-        return content.toString();
+
+        try {
+            return Files.readString(caminho);
+        } catch (IOException | RuntimeException e) {
+            System.err.printf("Não foi possível ler o arquivo '%s': %s%n", arquivo, e.getMessage());
+            return "";
+        }
     }
 }
