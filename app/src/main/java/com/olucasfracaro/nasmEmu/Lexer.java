@@ -2,6 +2,12 @@ package com.olucasfracaro.nasmEmu;
 
 import java.util.ArrayList;
 
+/**
+ * Classe responsável por transformar um código Assembly em uma lista de tokens.
+ * Esta classe é utilizada pelo @see Parser para obter os tokens do código Assembly.
+ * @author Lucas M.F.
+ * @see Parser
+ */
 public class Lexer {
     private String codigo;
     private ArrayList<Token> tokens = new ArrayList<>();
@@ -10,6 +16,10 @@ public class Lexer {
         this.codigo = codigo;
     }
 
+    /**
+     * Transforma um código Assembly em uma lista de tokens.
+     * @return Uma lista de tokens representando o código Assembly.
+     */
     public ArrayList<Token> tokenizar() {
         String[] linhas = this.codigo.split("\n");
 
@@ -109,12 +119,7 @@ public class Lexer {
                             continue;
                         }
 
-                        Tipo tipoOperando;
-                        if (operando.equals(","))                       tipoOperando = Tipo.VIRGULA;
-                        else if (Analisador.isNumero(operando))         tipoOperando = Tipo.NUMERO;
-                        else if (Analisador.isTexto(operando))          tipoOperando = Tipo.TEXTO;
-                        else if (Analisador.isRegistrador(operando))    tipoOperando = Tipo.REGISTRADOR;
-                        else                                            tipoOperando = Tipo.IDENTIFICADOR;
+                        Tipo tipoOperando = identificarPalavra(operando);
 
                         tokens.add(
                             new Token(
@@ -158,19 +163,7 @@ public class Lexer {
 
                     if (operando.isEmpty()) continue;
 
-                    Tipo tipoOperando = Tipo.IDENTIFICADOR;
-
-                    if (operando.equals(","))                   tipoOperando = Tipo.VIRGULA;
-                    else if (operando.equals(":"))              tipoOperando = Tipo.DOIS_PONTOS;
-                    else if (operando.equals("["))              tipoOperando = Tipo.ABRE_COLCHETE;
-                    else if (operando.equals("]"))              tipoOperando = Tipo.FECHA_COLCHETE;
-                    else if (Analisador.isOperador(operando))   tipoOperando = Tipo.OPERADOR;
-                    else if (Analisador.isNumero(operando))     tipoOperando = Tipo.NUMERO;
-                    else if (Analisador.isRegistrador(operando))tipoOperando = Tipo.REGISTRADOR;
-                    else if (Analisador.isInstrucao(operando))  tipoOperando = Tipo.INSTRUCAO;
-                    else if (Analisador.isDiretiva(operando))   tipoOperando = Tipo.DIRETIVA;
-                    else if (Analisador.isTexto(operando))      tipoOperando = Tipo.TEXTO;
-                    else                                        tipoOperando = Tipo.IDENTIFICADOR;
+                    Tipo tipoOperando = identificarPalavra(operando);
 
                     tokens.add(
                         new Token(
@@ -195,12 +188,17 @@ public class Lexer {
         return tokens;
     }
 
-    private String extrairComentario(String linhaSemComentario) {
+    /**
+     * Extrai o comentário (;) da linha de forma segura
+     * @param linha A linha de código com o comentário.
+     * @return A linha de código sem o comentário.
+     */
+    private String extrairComentario(String linha) {
         boolean dentroDeString = false;
         char aspasAbertura = 0;
 
-        for (int i = 0; i < linhaSemComentario.length(); i++) {
-            char c = linhaSemComentario.charAt(i);
+        for (int i = 0; i < linha.length(); i++) {
+            char c = linha.charAt(i);
 
             //suporte tanto a " quanto a '
             if ((c == '"' || c == '\'') && (!dentroDeString || c == aspasAbertura)) {
@@ -209,16 +207,27 @@ public class Lexer {
             }
 
             if (c == ';' && !dentroDeString) {
-                linhaSemComentario = linhaSemComentario.substring(0, i);
+                linha = linha.substring(0, i);
                 break;
             }
         }
-        return linhaSemComentario;
+        return linha;
     }
 
+    /**
+     * Identifica o tipo de uma palavra no código Assembly.
+     * @param palavra A palavra a ser identificada.
+     * @return O tipo da palavra.
+     */
     private Tipo identificarPalavra(String palavra) {
         String p = palavra.toLowerCase();
 
+        if (p.equals(","))                 return Tipo.VIRGULA;
+        if (p.equals(":"))                 return Tipo.DOIS_PONTOS;
+        if (p.equals("["))                 return Tipo.ABRE_COLCHETE;
+        if (p.equals("]"))                 return Tipo.FECHA_COLCHETE;
+        if (Analisador.isNumero(p))         return Tipo.NUMERO;
+        if (Analisador.isTexto(p))          return Tipo.TEXTO;
         if (Analisador.isInstrucao(p))      return Tipo.INSTRUCAO;
         if (Analisador.isDiretiva(p))       return Tipo.DIRETIVA;
         if (Analisador.isOperador(p))       return Tipo.OPERADOR;
@@ -227,6 +236,11 @@ public class Lexer {
         return Tipo.IDENTIFICADOR;
     }
 
+    /**
+     * Separa uma linha de código em palavras, considerando strings, delimitadores e operadores.
+     * @param linha A linha de código a ser separada.
+     * @return Uma lista de palavras extraídas da linha.
+     */
     private ArrayList<String> separarPalavras(String linha) {
         ArrayList<String> palavras = new ArrayList<>();
         StringBuilder atual = new StringBuilder();
@@ -304,6 +318,11 @@ public class Lexer {
         return palavras;
     }
 
+    /**
+     * Separa os operandos de uma instrução em uma lista de strings, considerando strings e vírgulas.
+     * @param operandos A string contendo os operandos.
+     * @return Um array de strings com os operandos separados.
+     */
     private String[] separarOperandos(String operandos) {
         ArrayList<String> lista = new ArrayList<>();
         StringBuilder atual = new StringBuilder();
@@ -338,9 +357,14 @@ public class Lexer {
         return lista.toArray(new String[0]);
     }
 
+    //getters e setters
     public void setCodigo(String codigo) { this.codigo = codigo; }
     public String getCodigo() { return this.codigo; }
 
+    /**
+     * Retorna uma representação em string do lexer, unindo todos os tokens com quebras de linha.
+     * @return Uma string contendo todos os tokens separados por quebras de linha.
+     */
     @Override
     public String toString() {
         return String.join(

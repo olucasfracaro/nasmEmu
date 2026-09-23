@@ -15,7 +15,8 @@ public class Principal
             System.out.printf("Usando o código Assembly: %s", args[0]);
             String conteudo = lerArquivo(args[0]);
             Lexer lexer = new Lexer(conteudo);
-            
+            lexer.tokenizar();
+
             System.out.println(lexer);
             return;
         }

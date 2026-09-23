@@ -2,6 +2,12 @@ package com.olucasfracaro.nasmEmu;
 
 import java.util.Set;
 
+/**
+ * Classe responsável por analisar palavras-chave, registradores, diretivas e operadores do NASM.
+ * Fornece métodos estáticos para verificar se uma palavra é uma instrução, registrador, diretiva, operador, texto ou número.
+ * Esta classe não mantém estado e todos os métodos são estáticos.
+ * @author Lucas M.F.
+ */
 public class Analisador {
 
     private static final Set<String> REGISTRADORES = Set.of(
