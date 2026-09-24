@@ -9,7 +9,7 @@ public final class Immediate32 implements Operand32 {
     }
 
     @Override
-    public int get() {
+    public int get(CPU32 cpu) {
         return value;
     }
 }

@@ -10,3 +10,7 @@ app/bin
 app/src/main/java/com/olucasfracaro/nasmEmu/*.asm
 
 .vscode
+.settings
+app/.settings/
+app/.classpath
+app/.project

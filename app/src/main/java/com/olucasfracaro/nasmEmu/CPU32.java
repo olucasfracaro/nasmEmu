@@ -2,195 +2,129 @@ package com.olucasfracaro.nasmEmu;
 
 public final class CPU32 {
 
-    private final Register32 eax = new Register32();
-    private final Register32 ebx = new Register32();
-    private final Register32 ecx = new Register32();
-    private final Register32 edx = new Register32();
+    // EFLAGS
+    private static final int CF = 0;
+    private static final int ZF = 6;
+    private static final int SF = 7;
+    private static final int OF = 11;
 
-    private final Register32 esi = new Register32();
-    private final Register32 edi = new Register32();
-    private final Register32 ebp = new Register32();
-    private final Register32 esp = new Register32();
+    // General-purpose registers
+    private int eax;
+    private int ebx;
+    private int ecx;
+    private int edx;
 
-    public Register32 eax() { return eax; }
-    public Register32 ebx() { return ebx; }
-    public Register32 ecx() { return ecx; }
-    public Register32 edx() { return edx; }
+    private int esi;
+    private int edi;
+    private int ebp;
+    private int esp;
 
-    public Register32 esi() { return esi; }
-    public Register32 edi() { return edi; }
-    public Register32 ebp() { return ebp; }
-    public Register32 esp() { return esp; }
+    // EIP
+    private int eip;
 
+    // EFLAGS
     private int eflags;
+
+    public CPU32() {
+        this.eflags = 0;
+        this.eip = 0;
+    }
+
+    public int getRegister(Register32.Nome nome) {
+        return switch (nome) {
+            case EAX -> eax;
+            case EBX -> ebx;
+            case ECX -> ecx;
+            case EDX -> edx;
+            case ESI -> esi;
+            case EDI -> edi;
+            case EBP -> ebp;
+            case ESP -> esp;
+        };
+    }
+
+    public void setRegister(Register32.Nome nome, int value) {
+        switch (nome) {
+            case EAX -> eax = value;
+            case EBX -> ebx = value;
+            case ECX -> ecx = value;
+            case EDX -> edx = value;
+            case ESI -> esi = value;
+            case EDI -> edi = value;
+            case EBP -> ebp = value;
+            case ESP -> esp = value;
+        }
+    }
+
+    public int eip() { return eip; }
+    public void eip(int value) { this.eip = value; }
 
     public int getEflags() { return eflags; }
     public void setEflags(int eflags) { this.eflags = eflags; }
 
-    
-    public CPU32() {
-        this.eflags = 0;
-    }
+    /*
+     * Atualiza as flags afetadas por ADD.
+     */
+    public void updateFlagsAdd(int a, int b, int result) {
 
-    @Override
-    public String toString() {
-        return "CPU32 {" +
-                "\n\teax=" + eax.get() +
-                "\n\tebx=" + ebx.get() +
-                "\n\tecx=" + ecx.get() +
-                "\n\tedx=" + edx.get() +
-                "\n\tesi=" + esi.get() +
-                "\n\tedi=" + edi.get() +
-                "\n\tebp=" + ebp.get() +
-                "\n\tesp=" + esp.get() +
-                "\n\teflags=" + getEflags() +
-                "\n}";
-    }
-
-    public void updateFlagsForOps(int a, int b, int result) {
-
-        /*
-         * CF - Carry Flag
-         * Bit 0 (xxxxxxxY)
-         */
         long unsigned =
                 Integer.toUnsignedLong(a)
                 + Integer.toUnsignedLong(b);
 
-        if ((unsigned >>> 32) != 0) {
-            eflags |= (1 << 0);
-        } else {
-            eflags &= ~(1 << 0);
-        }
+        setFlag(CF, (unsigned >>> 32) != 0);
 
-        /*
-         * ZF - Zero Flag
-         * Bit 6 (xxxxxYxx)
-         */
-        if (result == 0) {
-            eflags |= (1 << 6);
-        } else {
-            eflags &= ~(1 << 6);
-        }
- 
-        /*
-         * SF - Sign Flag
-         * Bit 7 (xxxxxxYx)
-         */
-        if (result < 0) {
-            eflags |= (1 << 7);
-        } else {
-            eflags &= ~(1 << 7);
-        }
+        setFlag(ZF, result == 0);
 
-        /*
-         * OF - Overflow Flag
-         * Bit 11 ()
-         */
+        setFlag(SF, result < 0);
+
         boolean overflow =
                 ((a ^ result)
                 & (b ^ result)
                 & 0x80000000) != 0;
 
-        if (overflow) {
-            eflags |= (1 << 11);
+        setFlag(OF, overflow);
+    }
+
+    /*
+     * Atualiza as flags das operações:
+     *
+     * AND
+     * OR
+     * XOR
+     */
+    public void updateFlagsLogic(int result) {
+
+        setFlag(CF, false);
+
+        setFlag(OF, false);
+
+        setFlag(ZF, result == 0);
+
+        setFlag(SF, result < 0);
+    }
+
+    private void setFlag(int flag, boolean value) {
+
+        if (value) {
+            eflags |= (1 << flag);
         } else {
-            eflags &= ~(1 << 11);
+            eflags &= ~(1 << flag);
         }
     }
-}
-
-final class And extends BinaryInstruction {
-
-    public And(Register32 destination, Operand32 source) {
-        super(destination, source);
-    }
 
     @Override
-    public void execute(CPU32 cpu) {
-
-        int a = destination.get();
-        int b = source.get();
-
-        int result = a & b;
-
-        destination.set(result);
-
-        // Update flags
-        cpu.updateFlagsForOps(a, b, result);
+    public String toString() {
+        return "CPU32 {" +
+                "\n\teax=" + eax +
+                "\n\tebx=" + ebx +
+                "\n\tecx=" + ecx +
+                "\n\tedx=" + edx +
+                "\n\tesi=" + esi +
+                "\n\tedi=" + edi +
+                "\n\tebp=" + ebp +
+                "\n\tesp=" + esp +
+                "\n\teip=" + eip +
+                "\n\teflags=" + eflags +
+                "\n}";
     }
 }
-
-final class Or extends BinaryInstruction {
-
-    public Or(Register32 destination, Operand32 source) {
-        super(destination, source);
-    }
-
-    @Override
-    public void execute(CPU32 cpu) {
-
-        int a = destination.get();
-        int b = source.get();
-
-        int result = a | b;
-
-        destination.set(result);
-
-        cpu.updateFlagsForOps(a, b, result);
-    }
-}
-
-final class Xor extends BinaryInstruction {
-
-    public Xor(Register32 destination, Operand32 source) {
-        super(destination, source);
-    }
-
-    @Override
-    public void execute(CPU32 cpu) {
-
-        int a = destination.get();
-        int b = source.get();
-
-        int result = a ^ b;
-
-        destination.set(result);
-
-        cpu.updateFlagsForOps(a, b, result);
-    }
-}
-
-final class Mov extends BinaryInstruction {
-
-    public Mov(Register32 destination, Operand32 source) {
-        super(destination, source);
-    }
-
-    @Override
-    public void execute(CPU32 cpu) {
-        int value = source.get();
-        destination.set(value);
-    }
-}
-
-final class Add extends BinaryInstruction {
-
-    public Add(Register32 destination, Operand32 source) {
-        super(destination, source);
-    }
-
-    @Override
-    public void execute(CPU32 cpu) {
-
-        int a = destination.get();
-        int b = source.get();
-
-        int result = a + b;
-
-        destination.set(result);
-
-        cpu.updateFlagsForOps(a, b, result);
-    }
-}
-
